@@ -1,0 +1,16 @@
+c:\users\ccrowe\documents\visual studio 2013\Projects\New Cover Sheets\New Cover Sheets\obj\Debug\Interop.Shell32.dll
+c:\users\ccrowe\documents\visual studio 2013\Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.csproj.ResolveComReference.cache
+c:\users\ccrowe\documents\visual studio 2013\Projects\New Cover Sheets\New Cover Sheets\obj\Debug\Interop.IWshRuntimeLibrary.dll
+c:\users\ccrowe\documents\visual studio 2013\Projects\New Cover Sheets\New Cover Sheets\bin\Debug\New Cover Sheets.exe
+c:\users\ccrowe\documents\visual studio 2013\Projects\New Cover Sheets\New Cover Sheets\bin\Debug\New Cover Sheets.pdb
+c:\users\ccrowe\documents\visual studio 2013\Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.exe
+c:\users\ccrowe\documents\visual studio 2013\Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.pdb
+C:\Users\ccrowe\Documents\Visual Studio 2013\Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.csprojResolveAssemblyReference.cache
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\obj\Debug\Interop.IWshRuntimeLibrary.dll
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\obj\Debug\Interop.Shell32.dll
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.csproj.ResolveComReference.cache
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.exe
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.pdb
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\bin\Debug\New Cover Sheets.exe
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\bin\Debug\New Cover Sheets.pdb
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.csprojResolveAssemblyReference.cache
