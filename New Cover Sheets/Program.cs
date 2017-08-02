@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.SqlClient;
+using System.Data.SqlTypes;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using IWshRuntimeLibrary;
 using Excel = Microsoft.Office.Interop.Excel;
 using File = System.IO.File;
+using System.Globalization;
 //This program creates the pw structure for our initial vetting
 //CA folders have descriptions
 //Facility/Component folders have numbers
@@ -21,6 +24,26 @@ namespace Vetting_Folder_Structure
         {
             if (string.IsNullOrEmpty(value)) return value;
             return value.Length <= maxLength ? value : value.Substring(0, maxLength);
+        }
+    }
+    class Facility
+    {
+        public List<string> Drawings;
+        public string Name;
+        public Facility(string name)
+        {
+            Name = name;
+            Drawings = new List<string>();
+        }
+    }
+    class Ca
+    {
+        public List<string> Drawings;
+        public string Name;
+        public Ca(string name)
+        {
+            Name = name;
+            Drawings = new List<string>();
         }
     }
     class Program
@@ -37,7 +60,112 @@ namespace Vetting_Folder_Structure
                 return null;
             }
         }
+        public static string Capitalise(string input)
+        {
+            if (input == "")
+            {
+                return "";
+            }
+            input = input.ToLower().Trim();
+            input =  input.First().ToString().ToUpper() +  input.Substring(1);
+            return input;
+        }
 
+        public static string GetFacilityPdfString(SortedSet<string> pdfs)
+        {
+            string pdfString = "";
+            string start = @"<div>
+       <nav class=""panel"">
+  <p class=""panel-heading"">
+    Facility Files
+  </p>
+";
+            string middle = "";
+            if (pdfs.Count == 0)
+            {
+                middle += String.Format(@"
+  <a class=""panel-block is-active"">
+    <span class=""panel-icon"">
+      <i class=""fa fa-book""></i>
+    </span>
+    No Facility Files
+  </a>
+");
+            }
+            foreach(var pdf in pdfs)
+            {
+                middle += String.Format(@"
+  <a class=""panel-block is-active"">
+    <span class=""panel-icon"">
+      <i class=""fa fa-book""></i>
+    </span>
+    {0}
+  </a>
+",pdf);
+            }
+            string end = @"
+  <div class=""panel-block"">
+  </div>
+</nav></div>
+";
+            pdfString = start + middle + end;
+            return pdfString;
+        }
+
+        public static string GetCaPdfString(Dictionary<string,SortedSet<string>> caDict)
+        {
+            
+            string start = @"<div>
+       <nav class=""panel"">
+  <p class=""panel-heading"">
+    Construction Activity Files
+  </p>
+";
+            string pdfString = start;
+            foreach(KeyValuePair<string,SortedSet<string>> ca in caDict)
+            {
+                string middlePart = "";
+                string newStart = String.Format(@"
+       <nav class=""panel"">
+  <p class=""panel-heading"">
+    Construction Activity Number: {0}
+  </p>
+",ca.Key);
+
+                string middle = "";
+                if (ca.Value.Count == 0)
+                {
+                    middle += String.Format(@"
+  <a class=""panel-block is-active"">
+    <span class=""panel-icon"">
+      <i class=""fa fa-book""></i>
+    </span>
+    No Construction Activity Files
+  </a>
+");
+                }
+                foreach (var pdf in ca.Value)
+                {
+                    middle += String.Format(@"
+  <a class=""panel-block is-active"">
+    <span class=""panel-icon"">
+      <i class=""fa fa-book""></i>
+    </span>
+    {0}
+  </a>
+", pdf);
+                }
+                middlePart = newStart + middle;
+                pdfString += middlePart;
+            }
+            string end = @"
+  <div class=""panel-block"">
+  </div>
+</nav></div>
+";
+            pdfString += end;
+            return pdfString;
+        }
         static void Main(string[] args)
         {
             string scoeBaseFolder = "C:\\SCoE";
@@ -62,6 +190,8 @@ namespace Vetting_Folder_Structure
                 //Added later, check this list to see if we want to create the cover sheet
             //Excel.Workbook cWb = xl.Workbooks.Open(checkFile);
             //Excel.Worksheet cs1 = cWb.Sheets[1];
+
+            TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
 
 
             using (
@@ -97,7 +227,7 @@ namespace Vetting_Folder_Structure
                             }
                             else
                             {
-                                secondaryProponent = "NO_SECONDARY_PROPONENT";
+                                secondaryProponent = "No Secondary Proponent";
                             }
 
                             if (!Directory.Exists(Path.Combine(scoeBaseFolder, secondaryProponent)))
@@ -111,7 +241,7 @@ namespace Vetting_Folder_Structure
                             }
                             else
                             {
-                                masterPlanningCategory = "NO_MASTER_PLANNING_CATEGORY";
+                                masterPlanningCategory = "No Master Planning Category";
                             }
                             if (
                                 !Directory.Exists(Path.Combine(scoeBaseFolder, secondaryProponent,
@@ -143,19 +273,35 @@ namespace Vetting_Folder_Structure
                         {
                             designAgentComments = "<span>" + designAgentComments.Replace("\n", "</span><br><span>") + "</span>";
                         }*/
-                            string newProponentComments = SpanInsert(vWs.Range["L" + i.ToString()].Value);
+                            var r = new Regex(@"(^[a-z])|\.\s+(.)", RegexOptions.ExplicitCapture);
+
+                            string newProponentComments = SpanInsert(Capitalise(vWs.Range["L" + i.ToString()].Value));
 
 
-                            string designator = SpanInsert(vWs.Range["B" + i.ToString()].Value);//
-                            string description = SpanInsert(vWs.Range["C" + i.ToString()].Value);//
-                            string detailField = SpanInsert(vWs.Range["F" + i.ToString()].Value);//
-                            string lookupToNoun = SpanInsert(vWs.Range["H" + i.ToString()].Value);//
-                            string lookupToStandard = SpanInsert(vWs.Range["I" + i.ToString()].Value);//
-                            string lookupToMasterPlanningCategory = SpanInsert(vWs.Range["J" + i.ToString()].Value);//
-                            string primaryConstructionMaterial = SpanInsert(vWs.Range["E" + i.ToString()].Value);//
-                            string primaryProponent = SpanInsert(vWs.Range["O" + i.ToString()].Value);//
-                            string lookupToType = SpanInsert(vWs.Range["G" + i.ToString()].Value);//
-                            string proponentRecommendation = SpanInsert(vWs.Range["K" + i.ToString()].Value);//
+                            string designator = SpanInsert(Capitalise(vWs.Range["B" + i.ToString()].Value));//
+                            string description = SpanInsert(Capitalise(vWs.Range["D" + i.ToString()].Value));//
+                            string detailField = SpanInsert(Capitalise(vWs.Range["F" + i.ToString()].Value));//
+                            string lookupToNoun = SpanInsert(Capitalise(vWs.Range["H" + i.ToString()].Value));//
+                            string lookupToStandard = SpanInsert(Capitalise(vWs.Range["I" + i.ToString()].Value));//
+                            string lookupToMasterPlanningCategory = SpanInsert(Capitalise(vWs.Range["J" + i.ToString()].Value));//
+                            string primaryConstructionMaterial = SpanInsert(Capitalise(vWs.Range["E" + i.ToString()].Value));//
+                            string primaryProponent = SpanInsert(Capitalise(vWs.Range["O" + i.ToString()].Value));//
+                            string lookupToType = SpanInsert(Capitalise(vWs.Range["G" + i.ToString()].Value));//
+                            string proponentRecommendation = SpanInsert(Capitalise(vWs.Range["K" + i.ToString()].Value));//
+                            string vettingDate = SpanInsert(vWs.Range["Q" + i.ToString()].Value);
+
+                            if (primaryProponent == "<span></span>")
+                            {
+                                primaryProponent = "No Primary Proponent";
+                            }
+
+                            if (vettingDate == "<span></span>")
+                            {
+                                vettingDate = "Has not been previously vetted";
+                            }
+
+                            Dictionary<string,SortedSet<string>> cas = new Dictionary<string,SortedSet<string>>();
+                            SortedSet<string> facs = new SortedSet<string>();
 
                             string currentCA = null;
                             string currentCANumber = null;
@@ -205,6 +351,7 @@ namespace Vetting_Folder_Structure
                                                                       .Replace(":", "-")
                                                                       .Replace("\"", "-");
                                                 drawName = drawName.Truncate(120);
+                                                cas.Last().Value.Add(drawName);
                                                 string shortDrawName = colNames[1];
                                                 string finalDrawPath = drawDir.FullName + "\\" + drawName + ".pdf";
                                                 try
@@ -292,6 +439,7 @@ namespace Vetting_Folder_Structure
                                             }
                                             else
                                             {
+                                                cas.Add(colNames[1].ToString(),new SortedSet<string>());
                                                 if (
                                                     !Directory.Exists(Path.Combine(scoeBaseFolder, secondaryProponent,
                                                         masterPlanningCategory, fnameLong, "CA Drawings")))
@@ -422,6 +570,7 @@ namespace Vetting_Folder_Structure
                                                                   .Replace("/", "-")
                                                                   .Replace(":", "-");
                                             drawName = drawName.Truncate(120);
+                                            facs.Add(drawName);
                                             string shortDrawName = colNames[1];
                                             string finalDrawPath = drawDir.FullName + "\\" + drawName + ".pdf";
                                             try
@@ -444,8 +593,9 @@ namespace Vetting_Folder_Structure
                                             }
                                             //Now add a shortcut in that file
                                             string finalLinkPath = null;
-                                            if (lookupToType.Contains("Facility"))
+                                            if (lookupToType.Contains("Facility") || lookupToType.Contains("facility"))
                                             {
+                                                facs.Add(drawName);
                                                 if (!Directory.Exists(Path.Combine(scoeBaseFolder, secondaryProponent,
                                                     masterPlanningCategory, fnameLong, "Facility Drawings")))
                                                 {
@@ -532,270 +682,243 @@ namespace Vetting_Folder_Structure
                             string htmlFile = "";
                             htmlFile = String.Format(@"
 <!DOCTYPE html>
-<head>
-<title>JCMS Desktop</title>
-<!-- Latest compiled and minified CSS -->
-<link rel=""stylesheet"" href=""https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"" integrity=""sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"" crossorigin=""anonymous"">
+<html>
+  <head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1"">
+    <title>Facility Vetting</title>
+    <link rel=""stylesheet"" href=""https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"">
+    <link rel=""stylesheet"" href=""https://cdnjs.cloudflare.com/ajax/libs/bulma/0.5.0/css/bulma.min.css"">
+  </head>
+  <body>
+  <section class=""section"">
+<section class=""hero is-medium is-primary is-bold"">
+  <div class=""hero-body"">
+    <div class=""container"">
+      <h1 class=""title"">
+        SCoE Vetting
+      </h1>
+      <h2 class=""subtitle"">
+        Facility Number: {0}
+      </h2>
+    </div>
+  </div>
+</section>
+      
+<nav class=""breadcrumb has-arrow-separator"" aria-label=""breadcrumbs"">
+  <ul>
+    <li><a href=""#"">{1}</a></li>
+    <li><a href=""#"">{2}</a></li>
+    <li class=""is-active""><a href=""#"" aria-current=""page"">Facility</a></li>
+  </ul>
+</nav>
+      
+<div class=""card"">
+  <header class=""card-header"">
+    <p class=""card-header-title"">
+      Description
+    </p>
+    <a class=""card-header-icon"">
+      <span class=""icon"">
+        <i class=""fa fa-angle-down""></i>
+      </span>
+    </a>
+  </header>
+  <div class=""card-content"">
+    <div class=""content"">
+      {3}
+      <br>
+      <small>Original Vetting Date: {4}</small>
+    </div>
+  </div>
+  <footer class=""card-footer"">
 
-<!-- Optional theme -->
-<link rel=""stylesheet"" href=""https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"" integrity=""sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"" crossorigin=""anonymous"">
-
-<!-- Latest compiled and minified JavaScript -->
-<script src=""https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"" integrity=""sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"" crossorigin=""anonymous""></script>
-</head>
-<body id = ""main"">
-<font face = ""arial"">
-    <div class = ""wrapper"">
-    <div class = ""LeftSide"">
-    <div class = ""module"">
-    <fieldset class=""fieldset-auto-width facilityNumber"">
-      <legend>Facility Number</legend>
-      <label>
-       <span>{0}</span>
-      </label>
-    </fieldset>
-    </div>
-    <div class=""module2"">
-    <fieldset class=""fieldset-auto-width"">
-      <legend>Description</legend>
-      <label>
-        <span>{1}</span>
-      </label>
-    </fieldset>
-    
-    
-    <fieldset class=""fieldset-auto-width"">
-      <legend>Detail Field</legend>
-      <label>
-        <span>{2}</span>
-      </label>
-    </fieldset>
-    </div>
-        <div class = ""category"">
-    <fieldset class=""fieldset-auto-width"">
-      <legend>Lookup to Noun</legend>
-      <label>
-        <span>{3}</span>
-      </label>
-    </fieldset>
-        
-    <fieldset class=""fieldset-auto-width"">
-      <legend>Lookup to Standard</legend>
-      <label>
-        <span>{4}</span>
-      </label>
-    </fieldset>
-        
-    <fieldset class=""fieldset-auto-width"">
-      <legend>Lookup to Master Planning Category</legend>
-      <label>
-        <span>{5}</span>
-      </label>
-    </fieldset>
-        
-    <fieldset class=""fieldset-auto-width"">
-      <legend>Primary Construction Material</legend>
-      <label>
-        <span>{6}</span>
-      </label>
-    </fieldset>
-    </div>
-    
-        
-        
+  </footer>
 </div>
+<div style=""margin:20px;"">
+</div>
+      
+    
+    
+      
+      
+      
+      
+      <div class=""tile is-ancestor"">
+  <div class=""tile is-vertical is-8"">
+    <div class=""tile"">
+      <div class=""tile is-parent is-vertical"">
+        <article class=""tile is-child notification is-primary"">
+          <p class=""title"">Lookup to Noun</p>
+
+<article class=""message is-primary is-medium"">
+  <div class=""message-body"">
+    {5}
+  </div>
+</article>
 
 
-    <div class = ""extra category2"">
             
-        <div>
-            <fieldset class = ""fieldset-auto-width"">
-              <legend>Primary<br>Proponent</legend>
-              <label>
-                <span>{7}</span>
-              </label>
-            </fieldset>
-<span class = ""arrow"">&#8594;</span>
-            <fieldset class = ""fieldset-auto-width"">
-              <legend>Secondary<br>Proponent</legend>
-              <label>
-                <span>{8}</span>
-              </label>
-            </fieldset>
-<span class = ""arrow"">&#8594;</span>
-            <fieldset class = ""fieldset-auto-width"">
-              <legend>Lookup<br>to Type</legend>
-              <label>
-                <span>{9}</span>
-              </label>
-            </fieldset>
+        </article>
+        <article class=""tile is-child notification is-warning"">
+          <p class=""title"">Lookup to Standard</p>
+            
+            
+<article class=""message is-warning is-medium"">
+  <div class=""message-body"">
+    {8}
+  </div>
+</article>
+    
+    
+        </article>
+      </div>
+      <div class=""tile is-parent"">
+        <article class=""tile is-child notification is-info"">
+          <p class=""title"">Lookup to Master Planning Category</p>
+
+            <article class=""message is-primary is-medium"">
+  <div class=""message-body"">
+    {9}
+  </div>
+</article>
+            
+            
+        </article>
+      </div>
+    </div>
+    <div class=""tile is-parent"">
+      <article class=""tile is-child notification is-danger"">
+        <p class=""title"">Detail Field</p>
+
+          
+          <article class=""message is-danger is-medium"">
+  <div class=""message-body"">
+    {7}
+  </div>
+</article>
+          
+          
+        <div class=""content"">
+          <!-- Content -->
         </div>
-
+      </article>
     </div>
+  </div>
+  <div class=""tile is-parent"">
+    <article class=""tile is-child notification is-success"">
+      <div class=""content"">
+        <p class=""title"">Primary Construction Material</p>
+
+          <article class=""message is-success is-medium"">
+  <div class=""message-body"">
+    {6}
+  </div>
+</article>
+          
+      </div>
+    </article>
+  </div>
+</div>
+      
+      
+      
+      
+      
+      
+      <article class=""message is-dark is-large"">
+  <div class=""message-header"">
+    <p>Proponent Comments</p>
+  </div>
+  <div class=""message-body"">
+    {10}
+  </div>
+</article>
 
 
-    <div class = ""Proponent description"" >
-    <fieldset class=""long"">
-      <legend>Proponent Comments</legend>
-      <label>
-        <span>{10}</span>
-      </label>
-    </fieldset>
-        
-    <fieldset class=""long"">
-      <legend>Proponent Recommendation</legend>
-      <label>
-        <span>{11}</span>
-      </label>
-    </fieldset>
-        
+<article class=""message is-warning is-large"">
+  <div class=""message-header"">
+    <p>Proponent Recommendation</p>
+  </div>
+  <div class=""message-body"">
+    {11}
+  </div>
+</article>
+      
+ 
+  </section>
+      
+      
+      
+      <article class=""media"">
+  <figure class=""media-left"">
+    <p class=""image is-64x64"">
+    </p>
+  </figure>
+  <div class=""media-content"">
+    <div class=""field"">
+      <p class=""control"">
+        <textarea rows=""20"" class=""textarea"" placeholder=""Design Agent Comments...""></textarea>
+      </p>
     </div>
-    </div>
-    </font>
-</body>
+    <nav class=""level"">
+      <div class=""level-left"">
+        <div class=""level-item"">
+        </div>
+      </div>
+      <div class=""level-right"">
+        <div class=""level-item"">
+          <label class=""checkbox"">
+          </label>
+        </div>
+      </div>
+    </nav>
+  </div>
+</article>
+      
+      
+      
+      
+      
+{12}
+      
+{13}
 
-<style>
-    #main{{
-        position:relative;
-        overflow:hidden;
+      <style>
+      @media print  
+{{
+        div{{
+        page-break-inside: avoid;
     }}
-    #main h1, #main h3{{
-        position:relative;
-        z-index = 2;
+        article {{
+        page-break-inside: avoid;
     }}
-    #main img{{
-        position:absolute;
-        width:100%;
-        height:auto;
-        opacity:0.07;
-        background-size:cover;
+        footer{{
+        page-break-inside: avoid;
     }}
-    .facilityNumber{{
-        border-color:rgba(106, 45, 38,1);
-        color:rgba(106,45,38,1);
-    }}
-    fieldset{{
-        padding:10px;
-        margin:5px;
-        border: 2px solid black;
-        border-radius: 8px;
-        height:auto;
-    }}
-    .fieldset-auto-width {{
-         display: inline-block;
-    }}
-    .long{{
-     height:auto;  
-    width:auto;
-    }}
-.module{{
-    background-color:rgba(208, 147, 140,.15);
-    width:auto;
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-    }}
-.module2{{
-    background-color:rgba(200, 200, 100,.1);
-    width:auto;
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-    }}
-    .description{{
-    width:auto;
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-    }}
-div.fieldset-auto-width {{
-    white-space: nowrap;
 }}
-    .Proponent{{
-        float:right;
-        top:0%;
-        left:42%;
-        width:55%;
-        background-color:rgba(208, 147, 140,.15);
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-        margin:0;
-        padding:0;
-    }}
-.FacNumber{{
-        float:left;
-        top:0%;
-        background-color:rgba(208, 147, 140,.15);
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-        margin:0;
-        padding:0;
-    }}
-    #table{{
-    width:auto; 
-    <!--background-color:rgba(208, 147, 140,.15);-->
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-    }}
-    .folderStructure{{
+</style>
+      
+      
+  </body>
+    
+    
+    
+    <footer class=""footer"">
+  <div class=""container"">
+    <div class=""content has-text-centered"">
+      <p>
+        An <strong>HDR</strong> document. 
+      </p>
+      <p>
+      </p>
+    </div>
+  </div>
+</footer>
+</html>
         
-    }}
-    .category{{
-    width:auto;
-    background-color:rgba(150, 150, 191, .07);
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-    }}
-    .LeftSide{{
-        float:left;
-        margin:0;
-        padding:0;
-        width:40%;
-    }}
-    #wrapper {{
-     margin: 0 auto;
-    position:relative;
-}}
-    legend{{
-    font-size:24px;
-    font-weight:600;
-    }}
-    label{{
-     font-size:19px; 
-    }}
-.arrow{{
-    font-size:200%;
-    vertical-align:text-bottom;
-    position:relative;
-    top: -15px;
-}}
-.category2{{
-    float:right;
-    background-color:rgba(150, 150, 191, .07);
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-    }}
-    .extra{{
-        float:right;
-        top:0%;
-        left:42%;
-        width:55%;
-    webkit-border-radius: 15px;
-    moz-border-radius: 10px; 
-    border-radius: 7px;
-        margin:0;
-        padding:0;
-    }}
-</style>     
-        
-                ", facilityNumber, description, detailField, lookupToNoun, lookupToStandard,
-                                lookupToMasterPlanningCategory, primaryConstructionMaterial, primaryProponent,
-                                secondaryProponent, lookupToType, newProponentComments, proponentRecommendation);
+                ", facilityNumber, textInfo.ToTitleCase(primaryProponent), textInfo.ToTitleCase(secondaryProponent), description, vettingDate, lookupToNoun, primaryConstructionMaterial, detailField, lookupToStandard, lookupToMasterPlanningCategory, newProponentComments,
+                 proponentRecommendation, GetFacilityPdfString(facs), GetCaPdfString(cas));
                             try
                             {
                                 File.WriteAllText(
@@ -974,9 +1097,11 @@ div.fieldset-auto-width {{
                     }
                 }
 
-
+            vWb.Close(false);
+                xl.Quit();
             Console.WriteLine("Done!");
             }
+            
         }
     }
 }
