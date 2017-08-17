@@ -13,3 +13,4 @@ C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New C
 C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.pdb
 C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\bin\Debug\New Cover Sheets.exe
 C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\bin\Debug\New Cover Sheets.pdb
+C:\Users\CCrowe\Documents\Visual Studio 2013\Old_Projects\New Cover Sheets\New Cover Sheets\obj\Debug\New Cover Sheets.csprojResolveAssemblyReference.cache

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data.SqlClient;
 using System.Data.SqlTypes;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -11,7 +12,8 @@ using System.Text.RegularExpressions;
 using IWshRuntimeLibrary;
 using Excel = Microsoft.Office.Interop.Excel;
 using File = System.IO.File;
-using System.Globalization;
+using ProcessStartInfo = System.Diagnostics.ProcessStartInfo;
+
 //This program creates the pw structure for our initial vetting
 //CA folders have descriptions
 //Facility/Component folders have numbers
@@ -48,6 +50,18 @@ namespace Vetting_Folder_Structure
     }
     class Program
     {
+        public static string PInsert(string val)
+        {
+            if (val != null)
+            {
+                val = "<p class=\"subtitle is-6\">" + val.Replace("\n", "<br>") + "</p>";
+                return val;
+            }
+            else
+            {
+                return null;
+            }
+        }
         public static string SpanInsert(string val)
         {
             if (val != null)
@@ -124,13 +138,18 @@ namespace Vetting_Folder_Structure
             string pdfString = start;
             foreach(KeyValuePair<string,SortedSet<string>> ca in caDict)
             {
+                string[] caSplit = ca.Key.Split(new string[] {" - "},StringSplitOptions.None);
                 string middlePart = "";
                 string newStart = String.Format(@"
-       <nav class=""panel"">
+
   <p class=""panel-heading"">
     Construction Activity Number: {0}
   </p>
-",ca.Key);
+  <p class=""panel-heading"">
+    Description: {1}
+  </p>
+
+", caSplit[0],caSplit[1]);
 
                 string middle = "";
                 if (ca.Value.Count == 0)
@@ -277,15 +296,14 @@ namespace Vetting_Folder_Structure
 
                             string newProponentComments = SpanInsert(Capitalise(vWs.Range["L" + i.ToString()].Value));
 
-
                             string designator = SpanInsert(Capitalise(vWs.Range["B" + i.ToString()].Value));//
                             string description = SpanInsert(Capitalise(vWs.Range["D" + i.ToString()].Value));//
-                            string detailField = SpanInsert(Capitalise(vWs.Range["F" + i.ToString()].Value));//
-                            string lookupToNoun = SpanInsert(Capitalise(vWs.Range["H" + i.ToString()].Value));//
-                            string lookupToStandard = SpanInsert(Capitalise(vWs.Range["I" + i.ToString()].Value));//
-                            string lookupToMasterPlanningCategory = SpanInsert(Capitalise(vWs.Range["J" + i.ToString()].Value));//
-                            string primaryConstructionMaterial = SpanInsert(Capitalise(vWs.Range["E" + i.ToString()].Value));//
-                            string primaryProponent = SpanInsert(Capitalise(vWs.Range["O" + i.ToString()].Value));//
+                            string detailField = (Capitalise(vWs.Range["F" + i.ToString()].Value));//
+                            string lookupToNoun = (Capitalise(vWs.Range["H" + i.ToString()].Value));//
+                            string lookupToStandard = (Capitalise(vWs.Range["I" + i.ToString()].Value));//
+                            string lookupToMasterPlanningCategory = (Capitalise(vWs.Range["J" + i.ToString()].Value));//
+                            string primaryConstructionMaterial = (Capitalise(vWs.Range["E" + i.ToString()].Value));//
+                            string primaryProponent = SpanInsert(vWs.Range["O" + i.ToString()].Value);//
                             string lookupToType = SpanInsert(Capitalise(vWs.Range["G" + i.ToString()].Value));//
                             string proponentRecommendation = SpanInsert(Capitalise(vWs.Range["K" + i.ToString()].Value));//
                             string vettingDate = SpanInsert(vWs.Range["Q" + i.ToString()].Value);
@@ -347,9 +365,9 @@ namespace Vetting_Folder_Structure
                                             {
                                                 string drawPath = colNames[0];
                                                 string drawName = colNames[1] + " - " +
-                                                                  colNames[2].Replace("/", "-")
+                                                                  Capitalise(colNames[2].Replace("/", "-")
                                                                       .Replace(":", "-")
-                                                                      .Replace("\"", "-");
+                                                                      .Replace("\"", "-"));
                                                 drawName = drawName.Truncate(120);
                                                 cas.Last().Value.Add(drawName);
                                                 string shortDrawName = colNames[1];
@@ -439,7 +457,7 @@ namespace Vetting_Folder_Structure
                                             }
                                             else
                                             {
-                                                cas.Add(colNames[1].ToString(),new SortedSet<string>());
+                                                cas.Add(colNames[1].ToString() + " - " + Capitalise(colNames[2].ToString()), new SortedSet<string>());
                                                 if (
                                                     !Directory.Exists(Path.Combine(scoeBaseFolder, secondaryProponent,
                                                         masterPlanningCategory, fnameLong, "CA Drawings")))
@@ -566,7 +584,7 @@ namespace Vetting_Folder_Structure
                                         {
                                             string drawPath = colNames[0];
                                             string drawName = colNames[1] + " - " +
-                                                              colNames[2].Replace("\"", "-")
+                                                              Capitalise(colNames[2].Replace("\"", "-"))
                                                                   .Replace("/", "-")
                                                                   .Replace(":", "-");
                                             drawName = drawName.Truncate(120);
@@ -681,6 +699,7 @@ namespace Vetting_Folder_Structure
                             }
                             string htmlFile = "";
                             htmlFile = String.Format(@"
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -691,9 +710,10 @@ namespace Vetting_Folder_Structure
     <link rel=""stylesheet"" href=""https://cdnjs.cloudflare.com/ajax/libs/bulma/0.5.0/css/bulma.min.css"">
   </head>
   <body>
-  <section class=""section"">
-<section class=""hero is-medium is-primary is-bold"">
-  <div class=""hero-body"">
+  <section class=""section""  style=""padding-top:8px;"">
+
+<section style=""height:75px;padding:5px;"" class=""hero is-primary is-bold"">
+  <div>
     <div class=""container"">
       <h1 class=""title"">
         SCoE Vetting
@@ -705,7 +725,7 @@ namespace Vetting_Folder_Structure
   </div>
 </section>
       
-<nav class=""breadcrumb has-arrow-separator"" aria-label=""breadcrumbs"">
+<nav class=""breadcrumb has-arrow-separator"" aria-label=""breadcrumbs"" style=""margin:0px;"">
   <ul>
     <li><a href=""#"">{1}</a></li>
     <li><a href=""#"">{2}</a></li>
@@ -713,7 +733,8 @@ namespace Vetting_Folder_Structure
   </ul>
 </nav>
       
-<div class=""card"">
+
+<div class=""card"" style=""margin:0px;"">
   <header class=""card-header"">
     <p class=""card-header-title"">
       Description
@@ -735,130 +756,136 @@ namespace Vetting_Folder_Structure
 
   </footer>
 </div>
-<div style=""margin:20px;"">
+<div style=""margin:5px;"">
 </div>
-      
+
     
-    
-      
-      
-      
-      
-      <div class=""tile is-ancestor"">
-  <div class=""tile is-vertical is-8"">
+
+
+<div class=""tile is-ancestor"" style=""margin-bottom:0px;"">
+  <div class=""tile is-vertical"">
     <div class=""tile"">
-      <div class=""tile is-parent is-vertical"">
+    <div class=""columns"" style=""margin:5px;width:100%;margin-bottom:0px;"">
+    <div class=""column"" style=""padding:0px;"">
+      <div class=""tile is-parent is-vertical is-6"" style=""margin:5px;width:100%;margin-bottom:0px;padding-right:3px;padding-left:0px;"">
         <article class=""tile is-child notification is-primary"">
-          <p class=""title"">Lookup to Noun</p>
+          <p class=""title is-6"">Lookup to Noun</p>
 
 <article class=""message is-primary is-medium"">
   <div class=""message-body"">
-    {5}
+    <p class=""subtitle is-6"" style=""margin:0%;"">{5}</p>
   </div>
 </article>
 
 
+<style>
+    article.is-child{{
+        padding:5px;
+    }}     
+    p.title{{
+        height:0px;
+    }}
+    article.message{{
+        margin:0px !important;
+        line-height:0px; !important;
+    }}
+            
+</style>
             
         </article>
-        <article class=""tile is-child notification is-warning"">
-          <p class=""title"">Lookup to Standard</p>
-            
-            
-<article class=""message is-warning is-medium"">
-  <div class=""message-body"">
-    {8}
+        <article class=""tile is-child notification is-warning"" style=""padding:5px;"">
+          <p class=""title is-6""  style=""height:0px;"" >Lookup to Standard</p>
+
+<article class=""message is-warning is-medium"" style=""margin:0px;margin-bottom:0px"">
+  <div class=""message-body lookup2standard"">
+    <p class=""subtitle is-6"">{8}</p>
   </div>
 </article>
-    
-    
         </article>
-      </div>
-      <div class=""tile is-parent"">
+          
+        
+      
         <article class=""tile is-child notification is-info"">
-          <p class=""title"">Lookup to Master Planning Category</p>
+          <p class=""title is-6""  style=""height:20px;"" >Lookup to Master Planning Category</p>
 
             <article class=""message is-primary is-medium"">
   <div class=""message-body"">
-    {9}
+    <p class=""subtitle is-6"">{9}</p>
   </div>
 </article>
-            
-            
         </article>
       </div>
-    </div>
-    <div class=""tile is-parent"">
+        </div>
+        
+        
+        <div class=""column is-two-thirds"" style=""padding:0px;"">
+        
+      <div class=""tile is-parent is-6"" style=""width:100%;padding-right:0px;padding-left:3px;"">
+    <div class=""tile is-parent is-vertical"" style=""padding:5px;"">
       <article class=""tile is-child notification is-danger"">
-        <p class=""title"">Detail Field</p>
+        <p class=""title is-5"" >Detail Field</p>
 
           
           <article class=""message is-danger is-medium"">
-  <div class=""message-body"">
-    {7}
+  <div class=""message-body""  style=""margin-bottom:5px;"">
+    <p class=""subtitle is-6"">{7}</p>
   </div>
 </article>
+
+              <article class=""tile is-child notification is-success"">
+        <p class=""title is-6"">Primary Construction Material</p>
+
+          <article class=""message is-success is-medium"">
+  <div class=""message-body"">
+    <p class=""subtitle is-6"">{6}</p>
+  </div>
+</article>
+          
+    </article>
           
           
         <div class=""content"">
           <!-- Content -->
         </div>
       </article>
+
+
+</div>
+      </div>
+        </div>
     </div>
   </div>
-  <div class=""tile is-parent"">
-    <article class=""tile is-child notification is-success"">
-      <div class=""content"">
-        <p class=""title"">Primary Construction Material</p>
-
-          <article class=""message is-success is-medium"">
-  <div class=""message-body"">
-    {6}
-  </div>
-</article>
-          
-      </div>
-    </article>
-  </div>
 </div>
+</div>
+
       
-      
-      
-      
-      
-      
-      <article class=""message is-dark is-large"">
+            <article class=""message is-dark"" style=""margin:0px;padding-top:0px;"">
   <div class=""message-header"">
     <p>Proponent Comments</p>
   </div>
-  <div class=""message-body"">
+  <div class=""message-body proponentRecommendation"">
     {10}
   </div>
 </article>
-
-
-<article class=""message is-warning is-large"">
-  <div class=""message-header"">
+<article class=""message is-warning"" style=""margin:0px;padding-top:5px;padding-bottom:5px;"">
+  <div class=""message-header"" >
     <p>Proponent Recommendation</p>
   </div>
-  <div class=""message-body"">
+  <div class=""message-body proponentRecommendation"">
     {11}
   </div>
 </article>
       
- 
-  </section>
       
+      
+
       
       
       <article class=""media"">
-  <figure class=""media-left"">
-    <p class=""image is-64x64"">
-    </p>
-  </figure>
   <div class=""media-content"">
     <div class=""field"">
       <p class=""control"">
-        <textarea rows=""20"" class=""textarea"" placeholder=""Design Agent Comments...""></textarea>
+        <textarea rows=""9"" class=""textarea"" placeholder=""Design Agent Comments...""></textarea>
       </p>
     </div>
     <nav class=""level"">
@@ -877,10 +904,11 @@ namespace Vetting_Folder_Structure
 </article>
       
       
-      
+        </section>
       
       
 {12}
+
       
 {13}
 
@@ -897,9 +925,32 @@ namespace Vetting_Folder_Structure
         page-break-inside: avoid;
     }}
 }}
+          
+              <style>  
+    p.title{{
+        height:0px;
+    }}
+    article.message{{
+        margin:0px !important;
+        line-height:0px; !important;
+    }}
+    .tile.is-vertical>.tile.is-child:not(:last-child) {{
+         margin-bottom: 0.4rem!important; 
+    }}
+    .tile.is-vertical>.tile.is-child:last-child {{
+        
+    }}   
+    body {{
+    line-height: 1.0;
+}}
+    div.message-body{{
+      padding:15px;
+      padding-left:5px;
+    }}
+    div.proponentRecommendation{{
+     padding:15px;
+    }}
 </style>
-      
-      
   </body>
     
     
@@ -916,9 +967,12 @@ namespace Vetting_Folder_Structure
   </div>
 </footer>
 </html>
-        
-                ", facilityNumber, textInfo.ToTitleCase(primaryProponent), textInfo.ToTitleCase(secondaryProponent), description, vettingDate, lookupToNoun, primaryConstructionMaterial, detailField, lookupToStandard, lookupToMasterPlanningCategory, newProponentComments,
-                 proponentRecommendation, GetFacilityPdfString(facs), GetCaPdfString(cas));
+                    
+                
+                    
+                ", facilityNumber, textInfo.ToTitleCase(primaryProponent), textInfo.ToTitleCase(secondaryProponent), description, vettingDate, 
+                 lookupToNoun, primaryConstructionMaterial, detailField, lookupToStandard, lookupToMasterPlanningCategory, 
+                 newProponentComments, proponentRecommendation, GetFacilityPdfString(facs), GetCaPdfString(cas));
                             try
                             {
                                 File.WriteAllText(
@@ -1101,7 +1155,25 @@ namespace Vetting_Folder_Structure
                 xl.Quit();
             Console.WriteLine("Done!");
             }
-            
+            string strCmdText;
+            run_cmd(@"C:\Users\CCrowe\AppData\Local\Continuum\Anaconda3\python.exe",
+                @"C:\Users\CCrowe\chrome convert html to pdf.py");
+        }
+        private static void run_cmd(string cmd, string args)
+        {
+            ProcessStartInfo start = new ProcessStartInfo();
+            start.FileName = cmd;//cmd is full path to python.exe
+            start.Arguments = args;//args is path to .py file and any cmd line args
+            start.UseShellExecute = false;
+            start.RedirectStandardOutput = true;
+            using (Process process = Process.Start(start))
+            {
+                using (StreamReader reader = process.StandardOutput)
+                {
+                    string result = reader.ReadToEnd();
+                    Console.Write(result);
+                }
+            }
         }
     }
 }
