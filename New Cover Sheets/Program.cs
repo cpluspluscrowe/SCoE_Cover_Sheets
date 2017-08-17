@@ -198,7 +198,7 @@ namespace Vetting_Folder_Structure
             }
             DirectoryInfo drawDir = new DirectoryInfo(Path.Combine(scoeBaseFolder, "Drawings"));
 
-            string vFilePath = @"C:\Users\CCrowe\IdeaProjects\GetFacilityDetails\data.xlsx";
+            string vFilePath = @"C:\Users\CCrowe\Documents\AFCS Folder\Mobile_Facilities_To_Create_Cover_Sheets\mobile_data.xlsx";
                 //before we used C:\\Users\\ccrowe\\Desktop\\JCMS Image\\Copy of Appendix A SCoE Facility List.xlsx 
             Excel.Application xl = new Excel.Application();
             xl.Visible = true;
@@ -215,7 +215,7 @@ namespace Vetting_Folder_Structure
 
             using (
                 SqlConnection conn =
-                    new SqlConnection("Server=OME-CND6435DR5;Database=JCMS_Local;Integrated Security = true"))
+                    new SqlConnection("Server=OME-CND6435DR5;Database=JCMS_Local_41;Integrated Security = true"))
             {
 
                 conn.Open();
@@ -306,7 +306,7 @@ namespace Vetting_Folder_Structure
                             string primaryProponent = SpanInsert(vWs.Range["O" + i.ToString()].Value);//
                             string lookupToType = SpanInsert(Capitalise(vWs.Range["G" + i.ToString()].Value));//
                             string proponentRecommendation = SpanInsert(Capitalise(vWs.Range["K" + i.ToString()].Value));//
-                            string vettingDate = SpanInsert(vWs.Range["Q" + i.ToString()].Value);
+                            string vettingDate = SpanInsert(vWs.Range["Q" + i.ToString()].Value.ToString());
 
                             if (primaryProponent == "<span></span>")
                             {
@@ -433,27 +433,10 @@ namespace Vetting_Folder_Structure
                                                 }
 
                                                 finalLinkPath = Path.Combine(parent,
-                                                    shortDrawName + ".pdf.lnk");
+                                                    shortDrawName + ".pdf");
 
-                                                WshShell wsh = new WshShell();
-                                                IWshRuntimeLibrary.IWshShortcut shortcut =
-                                                    (IWshShortcut)
-                                                        wsh.CreateShortcut(finalLinkPath);
-
-                                                shortcut.Arguments = "";
-                                                shortcut.TargetPath = finalDrawPath;
                                                 bool isTargetPathValid = File.Exists(finalDrawPath);
-                                                // not sure about what this is for
-                                                shortcut.WindowStyle = 1;
-
-                                                shortcut.Description = "Const Act:" +
-                                                                       currentCA.Replace("/", "-")
-                                                                           .Replace(":", "-")
-                                                                           .Replace("\"", "-");
-                                                shortcut.WorkingDirectory = drawDir.FullName;
-                                                bool isWorkingValid = Directory.Exists(shortcut.WorkingDirectory);
-                                                shortcut.IconLocation = "icon location";
-                                                shortcut.Save();
+                                                File.Copy(finalDrawPath,finalLinkPath);
                                             }
                                             else
                                             {
@@ -1017,7 +1000,7 @@ namespace Vetting_Folder_Structure
                                 {
                                     //We might have a facility/comp with no files, but I never labeled comp or facilities as empty above
                                     if (
-                                        !Directory.EnumerateFiles(d2.FullName, "*.pdf.lnk", SearchOption.AllDirectories)
+                                        !Directory.EnumerateFiles(d2.FullName, "*.pdf", SearchOption.AllDirectories)
                                             .Any())
                                         //if there are no pdfs, then label this file as empty
                                     {
