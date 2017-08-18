@@ -294,7 +294,15 @@ namespace Vetting_Folder_Structure
                         }*/
                             var r = new Regex(@"(^[a-z])|\.\s+(.)", RegexOptions.ExplicitCapture);
 
-                            string newProponentComments = SpanInsert(Capitalise(vWs.Range["L" + i.ToString()].Value));
+                            string newProponentComments = Capitalise(vWs.Range["L" + i.ToString()].Value);
+                            if (newProponentComments.Length > 80)
+                            {
+                                newProponentComments = String.Format("<p class=\"subtitle is-6\">{0}</p>",newProponentComments);
+                            }
+                            else
+                            {
+                                newProponentComments = SpanInsert(newProponentComments);
+                            }
 
                             string designator = SpanInsert(Capitalise(vWs.Range["B" + i.ToString()].Value));//
                             string description = SpanInsert(Capitalise(vWs.Range["D" + i.ToString()].Value));//
