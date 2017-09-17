@@ -76,6 +76,10 @@ namespace Vetting_Folder_Structure
         }
         public static string Capitalise(string input)
         {
+            if (input == null)
+            {
+                return "";
+            }
             if (input == "")
             {
                 return "";
@@ -205,11 +209,6 @@ namespace Vetting_Folder_Structure
             Excel.Workbook vWb = xl.Workbooks.Open(vFilePath);
             Excel.Worksheet vWs = vWb.Sheets["Datas"];
 
-            //string checkFile = "C:\\Users\\ccrowe\\Documents\\Appendix A SCoE Facility List2.xlsx";
-                //Added later, check this list to see if we want to create the cover sheet
-            //Excel.Workbook cWb = xl.Workbooks.Open(checkFile);
-            //Excel.Worksheet cs1 = cWb.Sheets[1];
-
             TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
 
 
@@ -306,7 +305,7 @@ namespace Vetting_Folder_Structure
 
                             string designator = SpanInsert(Capitalise(vWs.Range["B" + i.ToString()].Value));//
                             string description = SpanInsert(Capitalise(vWs.Range["D" + i.ToString()].Value));//
-                            string detailField = (Capitalise(vWs.Range["F" + i.ToString()].Value));//
+                            string sizeField = (Capitalise(vWs.Range["F" + i.ToString()].Value));//
                             string lookupToNoun = (Capitalise(vWs.Range["H" + i.ToString()].Value));//
                             string lookupToStandard = (Capitalise(vWs.Range["I" + i.ToString()].Value));//
                             string lookupToMasterPlanningCategory = (Capitalise(vWs.Range["J" + i.ToString()].Value));//
@@ -814,7 +813,7 @@ namespace Vetting_Folder_Structure
       <div class=""tile is-parent is-6"" style=""width:100%;padding-right:0px;padding-left:3px;"">
     <div class=""tile is-parent is-vertical"" style=""padding:5px;"">
       <article class=""tile is-child notification is-danger"">
-        <p class=""title is-5"" >Detail Field</p>
+        <p class=""title is-5"" >Facility Size</p>
 
           
           <article class=""message is-danger is-medium"">
@@ -962,7 +961,7 @@ namespace Vetting_Folder_Structure
                 
                     
                 ", facilityNumber, textInfo.ToTitleCase(primaryProponent), textInfo.ToTitleCase(secondaryProponent), description, vettingDate, 
-                 lookupToNoun, primaryConstructionMaterial, detailField, lookupToStandard, lookupToMasterPlanningCategory, 
+                 lookupToNoun, primaryConstructionMaterial, sizeField, lookupToStandard, lookupToMasterPlanningCategory, 
                  newProponentComments, proponentRecommendation, GetFacilityPdfString(facs), GetCaPdfString(cas));
                             try
                             {
