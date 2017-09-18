@@ -71,7 +71,7 @@ namespace Vetting_Folder_Structure
             }
             else
             {
-                return null;
+                return "";
             }
         }
         public static string Capitalise(string input)
@@ -88,8 +88,29 @@ namespace Vetting_Folder_Structure
             input =  input.First().ToString().ToUpper() +  input.Substring(1);
             return input;
         }
-
-        public static string GetFacilityPdfString(SortedSet<string> pdfs)
+        public static string GetRelativePath(string filespec, string folder)
+        {
+            Uri pathUri = new Uri(filespec);
+            // Folders must end in a slash
+            if (!folder.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                folder += Path.DirectorySeparatorChar;
+            }
+            Uri folderUri = new Uri(folder);
+            return Uri.UnescapeDataString(folderUri.MakeRelativeUri(pathUri).ToString().Replace('/', Path.DirectorySeparatorChar));
+        }
+        public static string GetPdfRelativePath(string pdf_name,string relativeDirectory)
+        {
+            //string[] stringSeparators = new string[] { " - " };
+            //string name = pdf_name.Split(stringSeparators, StringSplitOptions.None).ElementAt(0);
+            string drawingDir = @"\\omesrv3\afcs\3.0_Drawings\PDF Redlines";
+            DirectoryInfo di = new DirectoryInfo(drawingDir);
+            var file = di.GetFiles(String.Format("{0}*",pdf_name));
+            string fullPath = file.ElementAt(0).FullName;
+            string relativePath = GetRelativePath(fullPath, relativeDirectory);
+            return relativePath;
+        }
+        public static string GetFacilityPdfString(SortedSet<string> pdfs,string relativeDirectory)
         {
             string pdfString = "";
             string start = @"<div>
@@ -113,13 +134,13 @@ namespace Vetting_Folder_Structure
             foreach(var pdf in pdfs)
             {
                 middle += String.Format(@"
-  <a class=""panel-block is-active"">
+  <a class=""panel-block is-active"" href=""{1}"">
     <span class=""panel-icon"">
       <i class=""fa fa-book""></i>
     </span>
     {0}
   </a>
-",pdf);
+", pdf, GetPdfRelativePath(pdf, relativeDirectory));
             }
             string end = @"
   <div class=""panel-block"">
@@ -130,7 +151,7 @@ namespace Vetting_Folder_Structure
             return pdfString;
         }
 
-        public static string GetCaPdfString(Dictionary<string,SortedSet<string>> caDict)
+        public static string GetCaPdfString(Dictionary<string,SortedSet<string>> caDict,string relativeDirectory)
         {
             
             string start = @"<div>
@@ -170,13 +191,13 @@ namespace Vetting_Folder_Structure
                 foreach (var pdf in ca.Value)
                 {
                     middle += String.Format(@"
-  <a class=""panel-block is-active"">
+  <a class=""panel-block is-active"" href=""{1}"">
     <span class=""panel-icon"">
       <i class=""fa fa-book""></i>
     </span>
     {0}
   </a>
-", pdf);
+", pdf,GetPdfRelativePath(pdf, relativeDirectory));
                 }
                 middlePart = newStart + middle;
                 pdfString += middlePart;
@@ -191,16 +212,17 @@ namespace Vetting_Folder_Structure
         }
         static void Main(string[] args)
         {
-            string scoeBaseFolder = "C:\\SCoE";
+            string scoeBaseFolder = @"\\omesrv3\afcs\5.0_Deliverables\5.3_Mobile FY17\0-Vetting\Vetting Sept 2017";
             if (!Directory.Exists(scoeBaseFolder)) //create folder if it does not exist
             {
                 Directory.CreateDirectory(scoeBaseFolder);
             }
-            if (!Directory.Exists(Path.Combine(scoeBaseFolder, "Drawings")))
+            string drawingFolder = @"\\omesrv3\afcs\3.0_Drawings\PDF Redlines";
+            if (!Directory.Exists(drawingFolder))
             {
-                Directory.CreateDirectory(Path.Combine(scoeBaseFolder, "Drawings"));
+                Directory.CreateDirectory(drawingFolder);
             }
-            DirectoryInfo drawDir = new DirectoryInfo(Path.Combine(scoeBaseFolder, "Drawings"));
+            DirectoryInfo drawDir = new DirectoryInfo(drawingFolder);
 
             string vFilePath = @"C:\Users\CCrowe\Documents\AFCS Folder\Mobile_Facilities_To_Create_Cover_Sheets\mobile_data.xlsx";
                 //before we used C:\\Users\\ccrowe\\Desktop\\JCMS Image\\Copy of Appendix A SCoE Facility List.xlsx 
@@ -245,7 +267,7 @@ namespace Vetting_Folder_Structure
                             }
                             else
                             {
-                                secondaryProponent = "No Secondary Proponent";
+                                secondaryProponent = "No SP";
                             }
 
                             if (!Directory.Exists(Path.Combine(scoeBaseFolder, secondaryProponent)))
@@ -259,7 +281,7 @@ namespace Vetting_Folder_Structure
                             }
                             else
                             {
-                                masterPlanningCategory = "No Master Planning Category";
+                                masterPlanningCategory = "No MPC";
                             }
                             if (
                                 !Directory.Exists(Path.Combine(scoeBaseFolder, secondaryProponent,
@@ -313,7 +335,7 @@ namespace Vetting_Folder_Structure
                             string primaryProponent = SpanInsert(vWs.Range["O" + i.ToString()].Value);//
                             string lookupToType = SpanInsert(Capitalise(vWs.Range["G" + i.ToString()].Value));//
                             string proponentRecommendation = SpanInsert(Capitalise(vWs.Range["K" + i.ToString()].Value));//
-                            string vettingDate = SpanInsert(vWs.Range["Q" + i.ToString()].Value.ToString());
+                            string vettingDate = SpanInsert(vWs.Range["Q" + i.ToString()].Value);
 
                             if (primaryProponent == "<span></span>")
                             {
@@ -368,7 +390,7 @@ namespace Vetting_Folder_Structure
                                             string[] colNames = new string[4];
                                             reader.GetValues(colNames);
                                             var v = colNames[3];
-                                            if (colNames[3] == null) //{string[0]} is null
+                                            if (colNames[3] == null) //this is a file.  CA has a value at [3]
                                             {
                                                 string drawPath = colNames[0];
                                                 string drawName = colNames[1] + " - " +
@@ -388,7 +410,11 @@ namespace Vetting_Folder_Structure
                                                             "JCMS\\DATA_FILES\\DRAWINGS\\PDF\\70229-4108_M-MP101X.PDF";
                                                         //fix, wrong in the database
                                                     }
-                                                    File.Copy("C:" + "\\" + drawPath, finalDrawPath, true);
+                                                    string old_path = "C:" + "\\" + drawPath;
+                                                    if (!File.Exists(finalDrawPath))
+                                                    {
+                                                        File.Copy(old_path, finalDrawPath, false);    
+                                                    }
                                                 }
                                                 catch (Exception excpt)
                                                 {
@@ -440,10 +466,15 @@ namespace Vetting_Folder_Structure
                                                 }
 
                                                 finalLinkPath = Path.Combine(parent,
-                                                    shortDrawName + ".pdf");
+                                                    shortDrawName + ".pdf.lnk");
+                                                string targetPath = FindDrawingPath(shortDrawName);
+                                                AddLink(targetPath,finalLinkPath);
 
                                                 bool isTargetPathValid = File.Exists(finalDrawPath);
-                                                File.Copy(finalDrawPath,finalLinkPath);
+                                                if (!File.Exists(finalLinkPath))
+                                                {
+                                                    File.Copy(finalDrawPath, finalLinkPath, false);    
+                                                }
                                             }
                                             else
                                             {
@@ -590,7 +621,10 @@ namespace Vetting_Folder_Structure
                                                         "JCMS\\DATA_FILES\\DRAWINGS\\PDF\\70229-4108_M-MP101X.PDF";
                                                     //fix, wrong in the database
                                                 }
-                                                File.Copy("C:" + "\\" + drawPath, finalDrawPath, true);
+                                                if (!File.Exists(finalDrawPath))
+                                                {
+                                                    File.Copy("C:" + "\\" + drawPath, finalDrawPath, false);    
+                                                }
                                             }
                                             catch (Exception excpt)
                                             {
@@ -601,7 +635,7 @@ namespace Vetting_Folder_Structure
                                             }
                                             //Now add a shortcut in that file
                                             string finalLinkPath = null;
-                                            if (lookupToType.Contains("Facility") || lookupToType.Contains("facility"))
+                                            if (lookupToType.Contains("Facility") || lookupToType.Contains("facility") || lookupToType.Contains("<span></span>"))
                                             {
                                                 facs.Add(drawName);
                                                 if (!Directory.Exists(Path.Combine(scoeBaseFolder, secondaryProponent,
@@ -688,6 +722,12 @@ namespace Vetting_Folder_Structure
                                 }
                             }
                             string htmlFile = "";
+                            string line_count = "14";
+                            if (GetFacilitySize(sizeField) != null)
+                            {
+                                line_count = "11";
+                            }
+                            string relativeDirectory = Path.Combine(scoeBaseFolder, secondaryProponent, masterPlanningCategory, fnameLong);
                             htmlFile = String.Format(@"
 
 <!DOCTYPE html>
@@ -706,7 +746,7 @@ namespace Vetting_Folder_Structure
   <div>
     <div class=""container"">
       <h1 class=""title"">
-        SCoE Vetting
+        Mobile Vetting
       </h1>
       <h2 class=""subtitle"">
         Facility Number: {0}
@@ -717,8 +757,6 @@ namespace Vetting_Folder_Structure
       
 <nav class=""breadcrumb has-arrow-separator"" aria-label=""breadcrumbs"" style=""margin:0px;"">
   <ul>
-    <li><a href=""#"">{1}</a></li>
-    <li><a href=""#"">{2}</a></li>
     <li class=""is-active""><a href=""#"" aria-current=""page"">Facility</a></li>
   </ul>
 </nav>
@@ -756,126 +794,25 @@ namespace Vetting_Folder_Structure
   <div class=""tile is-vertical"">
     <div class=""tile"">
     <div class=""columns"" style=""margin:5px;width:100%;margin-bottom:0px;"">
-    <div class=""column"" style=""padding:0px;"">
-      <div class=""tile is-parent is-vertical is-6"" style=""margin:5px;width:100%;margin-bottom:0px;padding-right:3px;padding-left:0px;"">
-        <article class=""tile is-child notification is-primary"">
-          <p class=""title is-6"">Lookup to Noun</p>
 
-<article class=""message is-primary is-medium"">
-  <div class=""message-body"">
-    <p class=""subtitle is-6"" style=""margin:0%;"">{5}</p>
-  </div>
-</article>
-
-
-<style>
-    article.is-child{{
-        padding:5px;
-    }}     
-    p.title{{
-        height:0px;
-    }}
-    article.message{{
-        margin:0px !important;
-        line-height:0px; !important;
-    }}
-            
-</style>
-            
-        </article>
-        <article class=""tile is-child notification is-warning"" style=""padding:5px;"">
-          <p class=""title is-6""  style=""height:0px;"" >Lookup to Standard</p>
-
-<article class=""message is-warning is-medium"" style=""margin:0px;margin-bottom:0px"">
-  <div class=""message-body lookup2standard"">
-    <p class=""subtitle is-6"">{8}</p>
-  </div>
-</article>
-        </article>
-          
-        
-      
-        <article class=""tile is-child notification is-info"">
-          <p class=""title is-6""  style=""height:20px;"" >Lookup to Master Planning Category</p>
-
-            <article class=""message is-primary is-medium"">
-  <div class=""message-body"">
-    <p class=""subtitle is-6"">{9}</p>
-  </div>
-</article>
-        </article>
-      </div>
-        </div>
-        
-        
-        <div class=""column is-two-thirds"" style=""padding:0px;"">
         
       <div class=""tile is-parent is-6"" style=""width:100%;padding-right:0px;padding-left:3px;"">
     <div class=""tile is-parent is-vertical"" style=""padding:5px;"">
-      <article class=""tile is-child notification is-danger"">
-        <p class=""title is-5"" >Facility Size</p>
-
-          
-          <article class=""message is-danger is-medium"">
-  <div class=""message-body""  style=""margin-bottom:5px;"">
-    <p class=""subtitle is-6"">{7}</p>
-  </div>
-</article>
-
-              <article class=""tile is-child notification is-success"">
-        <p class=""title is-6"">Primary Construction Material</p>
-
-          <article class=""message is-success is-medium"">
-  <div class=""message-body"">
-    <p class=""subtitle is-6"">{6}</p>
-  </div>
-</article>
-          
-    </article>
-          
-          
-        <div class=""content"">
-          <!-- Content -->
-        </div>
-      </article>
-
+{14}
 
 </div>
-      </div>
         </div>
     </div>
   </div>
 </div>
 </div>
 
-      
-            <article class=""message is-dark"" style=""margin:0px;padding-top:0px;"">
-  <div class=""message-header"">
-    <p>Proponent Comments</p>
-  </div>
-  <div class=""message-body proponentRecommendation"">
-    {10}
-  </div>
-</article>
-<article class=""message is-warning"" style=""margin:0px;padding-top:5px;padding-bottom:5px;"">
-  <div class=""message-header"" >
-    <p>Proponent Recommendation</p>
-  </div>
-  <div class=""message-body proponentRecommendation"">
-    {11}
-  </div>
-</article>
-      
-      
-      
-
-      
-      
-      <article class=""media"">
+     
+      <article class=""media"" style=""bottom:1000px;"">
   <div class=""media-content"">
     <div class=""field"">
       <p class=""control"">
-        <textarea rows=""9"" class=""textarea"" placeholder=""Design Agent Comments...""></textarea>
+        <textarea rows=""{15}"" class=""textarea"" placeholder=""Design Agent Comments..."" style = """"></textarea>
       </p>
     </div>
     <nav class=""level"">
@@ -961,8 +898,8 @@ namespace Vetting_Folder_Structure
                 
                     
                 ", facilityNumber, textInfo.ToTitleCase(primaryProponent), textInfo.ToTitleCase(secondaryProponent), description, vettingDate, 
-                 lookupToNoun, primaryConstructionMaterial, sizeField, lookupToStandard, lookupToMasterPlanningCategory, 
-                 newProponentComments, proponentRecommendation, GetFacilityPdfString(facs), GetCaPdfString(cas));
+                 lookupToNoun, primaryConstructionMaterial, sizeField, lookupToStandard, lookupToMasterPlanningCategory,
+                 newProponentComments, proponentRecommendation, GetFacilityPdfString(facs, relativeDirectory), GetCaPdfString(cas,relativeDirectory), GetFacilitySize(sizeField),line_count);
                             try
                             {
                                 File.WriteAllText(
@@ -980,7 +917,7 @@ namespace Vetting_Folder_Structure
                     }
                 }
                 //Start of second program, 'Add Par to Folder'
-                scoeBaseFolder = "C:\\SCoE";
+                scoeBaseFolder = @"\\omesrv3\afcs\5.0_Deliverables\5.3_Mobile FY17\0-Vetting\Vetting Sept 2017";
                 DirectoryInfo baseDi = new DirectoryInfo(scoeBaseFolder);
                 foreach (var d in baseDi.GetDirectories("*"))
                 {
@@ -1007,7 +944,7 @@ namespace Vetting_Folder_Structure
                                 {
                                     //We might have a facility/comp with no files, but I never labeled comp or facilities as empty above
                                     if (
-                                        !Directory.EnumerateFiles(d2.FullName, "*.pdf", SearchOption.AllDirectories)
+                                        !Directory.EnumerateFiles(d2.FullName, "*.pdf*", SearchOption.AllDirectories)
                                             .Any())
                                         //if there are no pdfs, then label this file as empty
                                     {
@@ -1148,6 +1085,53 @@ namespace Vetting_Folder_Structure
             string strCmdText;
             run_cmd(@"C:\Users\CCrowe\AppData\Local\Continuum\Anaconda3\python.exe",
                 @"C:\Users\CCrowe\chrome convert html to pdf.py");
+        }
+
+        private static string FindDrawingPath(string shortDrawName)
+        {
+            string redlineDir = @"\\omesrv3\afcs\3.0_Drawings\PDF Redlines";
+            DirectoryInfo di = new DirectoryInfo(redlineDir);
+            FileInfo file = di.GetFiles("*" + shortDrawName + "*", SearchOption.AllDirectories).ElementAt(0);
+            return file.FullName;
+        }
+        private static void AddLink(string targetPath,string linkPath)
+        {
+            WshShell wsh = new WshShell();
+            IWshRuntimeLibrary.IWshShortcut shortcut =
+                (IWshShortcut)
+                wsh.CreateShortcut(linkPath);
+            shortcut.Arguments = "";
+            shortcut.TargetPath = targetPath;
+            // not sure about what this is for
+            shortcut.WindowStyle = 1;
+            shortcut.Description = "Link";
+            shortcut.WorkingDirectory = Path.GetDirectoryName(linkPath);
+            shortcut.IconLocation = "icon location";
+            shortcut.Save();
+        }
+        private static string GetFacilitySize(string facilitySize)
+        {
+            if (facilitySize != "" && facilitySize != null)
+            {
+                return String.Format(@"      <article class=""tile is-child notification is-info"">
+                <p class=""title is-5"" >Facility Size</p>
+
+                <article class=""message is-info is-medium"">
+                <div class=""message-body""  style=""margin-bottom:5px;"">
+                <p class=""subtitle is-6"">{0}</p>
+                </div>
+                </article>          
+          
+                <div class=""content"">
+                <!-- Content -->
+                </div>
+                </article>
+                ", facilitySize);
+            }
+            else
+            {
+                return null;
+            }
         }
         private static void run_cmd(string cmd, string args)
         {
